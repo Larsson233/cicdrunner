@@ -1,12 +1,9 @@
 # This workflow will build a .NET project
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-net
 
 name: .NET
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
     branches: [ "main" ]
 
 jobs:
@@ -20,9 +17,25 @@ jobs:
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: 6.0.x
-    - name: Restore dependencies
-      run: dotnet restore
     - name: Build
-      run: dotnet build --no-restore
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet build 
+    - name: Publish
+      run: dotnet publish -o ${{env.DOTNET_ROOT}}/publish
+    - name: Upload artifacts to GitHub Artifact Store
+      uses: actions/upload-artifact@v3
+      with: 
+        name: my-artifacts
+        path: ${{env.DOTNET_ROOT}}/publish
+
+  deploy: 
+     runs-on: self-hosted
+     needs: build
+     steps:
+     - name: Download artifacts to VM
+       uses: actions/download-artifact@v3
+       with: 
+         name: my-artifacts
+     - name: Stop webapp
+       run: sudo systemctl stop MyApp.service
+     - name: Start webapp
+       run: sudo systemctl start MyApp.service
